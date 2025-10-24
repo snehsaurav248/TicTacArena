@@ -1,34 +1,55 @@
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import Cell from './Cell';
-import { socket } from '../services/socket';
+import React from "react";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { socket } from "../services/socket";
 
-interface BoardProps {
+type Props = {
   board: (string | null)[];
   roomId: string;
   username: string;
-}
+};
 
-const Board: React.FC<BoardProps> = ({ board, roomId, username }) => {
-  const handleCellPress = (index: number) => {
-    socket.emit('makeMove', { roomId, index, username });
+const Board: React.FC<Props> = ({ board, roomId, username }) => {
+  const handlePress = (index: number) => {
+    if (!board[index]) {
+      socket.emit("make_move", { roomId, index, username });
+    }
   };
 
   return (
-    <View style={styles.board}>
+    <View style={styles.container}>
       {board.map((cell, index) => (
-        <Cell key={index} value={cell} onPress={() => handleCellPress(index)} />
+        <TouchableOpacity
+          key={index}
+          style={styles.cell}
+          onPress={() => handlePress(index)}
+          disabled={!!cell}
+        >
+          <Text style={styles.cellText}>{cell}</Text>
+        </TouchableOpacity>
       ))}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  board: {
+  container: {
     width: 300,
     height: 300,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginVertical: 20,
+  },
+  cell: {
+    width: "33.33%",
+    height: "33.33%",
+    borderWidth: 1,
+    borderColor: "#000",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  cellText: {
+    fontSize: 32,
+    fontWeight: "bold",
   },
 });
 
