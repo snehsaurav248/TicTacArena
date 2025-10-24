@@ -1,10 +1,17 @@
+// models/Game.js
 import mongoose from "mongoose";
 
 const gameSchema = new mongoose.Schema({
-  player1: String,
-  player2: String,
-  moves: [Number],
-  winner: String,
+  roomId: { type: String, required: true, unique: true },
+  players: [
+    {
+      id: String,
+      username: String,
+    },
+  ],
+  board: { type: [String], default: Array(9).fill(null) },
+  turn: { type: String }, // socket.id of current turn
+  winner: { type: String, default: null },
   createdAt: { type: Date, default: Date.now },
 });
 
