@@ -8,14 +8,13 @@ const playerMap = new Map();
 export default (io, socket) => {
   // Player looking for a match
   socket.on("find_match", async (username) => {
-    playerMap.set(username, socket.id); // Save mapping for reconnects
+    playerMap.set(username, socket.id);
     queue.push({ id: socket.id, username });
 
     if (queue.length >= 2) {
       const [p1, p2] = queue.splice(0, 2);
-      const roomId = uuidv4(); // generate unique room ID
+      const roomId = uuidv4();
 
-      // Create game in DB
       const game = new Game({
         roomId,
         players: [
@@ -27,11 +26,9 @@ export default (io, socket) => {
       });
       await game.save();
 
-      // Join players to Socket.io room
       io.to(p1.id).socketsJoin(roomId);
       io.to(p2.id).socketsJoin(roomId);
 
-      // Notify players
       io.to(roomId).emit("match_found", {
         roomId,
         players: [p1.username, p2.username],
@@ -41,46 +38,80 @@ export default (io, socket) => {
   });
 
   // Player makes a move
-  socket.on("make_move", async ({ roomId, index }) => {
-    const game = await Game.findOne({ roomId });
-    if (!game || game.board[index]) return;
+socket.on("make_move", async ({ roomId, index }) => {
+  const game = await Game.findOne({ roomId });
+  if (!game || game.board[index]) return;
+  if (game.turn !== socket.id) return;
 
-    if (game.turn !== socket.id) return;
+  const mark = game.players[0].id === socket.id ? "X" : "O";
+  game.board[index] = mark;
 
-    // Determine mark (X or O)
-    const mark = game.players[0].id === socket.id ? "X" : "O";
-    game.board[index] = mark;
+  // ✅ Check if there’s a winner or draw
+  const winnerMark = checkWinner(game.board);
 
-    const winnerMark = checkWinner(game.board);
+  console.log("WinnerMark:", winnerMark, "Board Full:", !game.board.includes(null));
 
-    // If there is a winner, store the username instead of "X" or "O"
-    if (winnerMark) {
-      const winnerPlayer =
-        winnerMark === "X" ? game.players[0].username : game.players[1].username;
-      game.winner = winnerPlayer;
-    }
+  let gameOver = false;
 
-    // Switch turn
+  if (winnerMark) {
+    // Found a winner
+    game.winner =
+      winnerMark === "X"
+        ? game.players[0].username
+        : game.players[1].username;
+    gameOver = true;
+  } else if (!game.board.includes(null)) {
+    // Board full — no winner => Draw
+    game.winner = "Draw";
+    gameOver = true;
+  }
+
+  // ✅ Only switch turn if the game is NOT over
+  if (!gameOver) {
     game.turn =
       game.turn === game.players[0].id
         ? game.players[1].id
         : game.players[0].id;
+  }
 
-    await game.save();
+  // ✅ Save once at the end
+  await game.save();
 
-    // Update board for both players
-    io.to(roomId).emit("updateBoard", {
-      board: game.board,
-      nextTurn: game.players.find((p) => p.id === game.turn).username,
-    });
-
-    // Notify game over
-    if (winnerMark) {
-      io.to(roomId).emit("gameOver", { winner: game.winner });
-    }
+  // Send board updates
+  io.to(roomId).emit("updateBoard", {
+    board: game.board,
+    nextTurn: !gameOver
+      ? game.players.find((p) => p.id === game.turn).username
+      : null,
   });
 
-  // Player reconnects to an existing game
+  // ✅ Handle Game Over properly
+  if (gameOver) {
+    // Update leaderboard stats
+    const [p1, p2] = game.players;
+    if (game.winner === "Draw") {
+      p1.draws = (p1.draws || 0) + 1;
+      p2.draws = (p2.draws || 0) + 1;
+    } else {
+      const winnerPlayer = game.players.find(
+        (p) => p.username === game.winner
+      );
+      const loserPlayer = game.players.find(
+        (p) => p.username !== game.winner
+      );
+      if (winnerPlayer && loserPlayer) {
+        winnerPlayer.wins = (winnerPlayer.wins || 0) + 1;
+        loserPlayer.losses = (loserPlayer.losses || 0) + 1;
+      }
+    }
+
+    await game.save();
+    io.to(roomId).emit("gameOver", { winner: game.winner });
+  }
+});
+
+
+  // Player reconnects
   socket.on("reconnect_game", async ({ roomId, username }) => {
     try {
       const game = await Game.findOne({ roomId });
@@ -96,12 +127,11 @@ export default (io, socket) => {
 
       io.to(socket.id).emit("updateBoard", {
         board: game.board,
-        nextTurn: game.players.find((p) => p.id === game.turn).username,
+        nextTurn: game.players.find((p) => p.id === game.turn)?.username,
       });
 
       playerMap.set(username, socket.id);
-
-      console.log(` ${username} reconnected to room ${roomId}`);
+      console.log(`${username} reconnected to room ${roomId}`);
     } catch (err) {
       console.error("Reconnect failed:", err);
     }
