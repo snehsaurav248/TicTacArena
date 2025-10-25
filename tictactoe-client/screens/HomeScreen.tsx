@@ -18,9 +18,14 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
+  const handleLeaderboard = () => {
+    navigation.navigate('Leaderboard');
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>🎮 Tic-Tac-Toe Multiplayer</Text>
+
       <TextInput
         placeholder="Enter your name"
         value={username}
@@ -28,12 +33,21 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
         style={styles.input}
         placeholderTextColor="#888"
       />
+
       <TouchableOpacity
         style={[styles.button, !username.trim() && styles.buttonDisabled]}
         onPress={handleStart}
         disabled={!username.trim()}
       >
         <Text style={styles.buttonText}>Start</Text>
+      </TouchableOpacity>
+
+      {/* Leaderboard Button */}
+      <TouchableOpacity
+        style={[styles.button, styles.leaderboardButton]}
+        onPress={handleLeaderboard}
+      >
+        <Text style={styles.buttonText}>Leaderboard</Text>
       </TouchableOpacity>
     </View>
   );
@@ -48,20 +62,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#aba7c2ff',
   },
   title: { 
-  fontSize: 32, 
-  marginBottom: 30, 
-  fontWeight: 'bold', 
-  color: '#6200EE',
-  textAlign: 'center',
-  textShadowColor: 'rgba(0,0,0,0.3)',
-  textShadowOffset: { width: 2, height: 2 },
-  textShadowRadius: 4,
-  paddingHorizontal: 20,
-  paddingVertical: 10,
-  borderWidth: 2,
-  borderColor: '#6200EE',
-  borderRadius: 12,
-  backgroundColor: '#EDE7F6', 
+    fontSize: 32, 
+    marginBottom: 30, 
+    fontWeight: 'bold', 
+    color: '#6200EE',
+    textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 4,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderWidth: 2,
+    borderColor: '#6200EE',
+    borderRadius: 12,
+    backgroundColor: '#EDE7F6', 
   },
   input: { 
     width: '70%', 
@@ -81,6 +95,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
+  },
+  leaderboardButton: {
+    marginTop: 15, // spacing from Start button
   },
   buttonDisabled: {
     backgroundColor: '#aaa',

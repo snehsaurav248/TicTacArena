@@ -14,22 +14,29 @@ const GameScreen: React.FC<Props> = ({ route, navigation }) => {
   const [winner, setWinner] = useState<string | null>(null);
 
   useEffect(() => {
-    socket.emit("reconnect_game", { roomId });
+    if (!roomId) return;
 
-    socket.on("updateBoard", (data: { board: string[]; nextTurn: string }) => {
+    // ✅ Reconnect player to game with identity
+    socket.emit("reconnect_game", { roomId, username });
+
+    const handleBoardUpdate = (data: { board: string[]; nextTurn: string }) => {
       setBoard(data.board);
       setTurn(data.nextTurn);
-    });
-
-    socket.on("gameOver", (data: { winner: string }) => {
-      setWinner(data.winner);
-    });
-
-    return () => {
-      socket.off("updateBoard");
-      socket.off("gameOver");
     };
-  }, [roomId]);
+
+    const handleGameOver = (data: { winner: string }) => {
+      setWinner(data.winner);
+    };
+
+    socket.on("updateBoard", handleBoardUpdate);
+    socket.on("gameOver", handleGameOver);
+
+    // Cleanup listeners on unmount
+    return () => {
+      socket.off("updateBoard", handleBoardUpdate);
+      socket.off("gameOver", handleGameOver);
+    };
+  }, [roomId, username]);
 
   return (
     <View style={styles.container}>
