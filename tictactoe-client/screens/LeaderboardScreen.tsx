@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, FlatList, StyleSheet } from "react-native";
+import { View, Text, FlatList, StyleSheet, TouchableOpacity } from "react-native";
+import { useNavigation } from "@react-navigation/native"; // Import hook
 
 type Player = {
   username: string;
@@ -9,6 +10,7 @@ type Player = {
 };
 
 const LeaderboardScreen: React.FC = () => {
+  const navigation = useNavigation(); // Get navigation
   const [players, setPlayers] = useState<Player[]>([]);
 
   useEffect(() => {
@@ -36,6 +38,10 @@ const LeaderboardScreen: React.FC = () => {
         keyExtractor={(item) => item.username}
         renderItem={renderItem}
       />
+      {/* Back Button */}
+      <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+        <Text style={styles.backButtonText}>⬅ Back</Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -58,6 +64,19 @@ const styles = StyleSheet.create({
   rank: { fontWeight: "bold", fontSize: 16 },
   name: { fontSize: 16 },
   stats: { fontSize: 16, fontWeight: "500" },
+  backButton: {
+    marginTop: 20,
+    alignSelf: "center",
+    backgroundColor: "#6200EE",
+    paddingVertical: 12,
+    paddingHorizontal: 25,
+    borderRadius: 10,
+  },
+  backButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
 });
 
 export default LeaderboardScreen;
