@@ -46,7 +46,7 @@ socket.on("make_move", async ({ roomId, index }) => {
   const mark = game.players[0].id === socket.id ? "X" : "O";
   game.board[index] = mark;
 
-  // ✅ Check if there’s a winner or draw
+  //  Check if there’s a winner or draw
   const winnerMark = checkWinner(game.board);
 
   console.log("WinnerMark:", winnerMark, "Board Full:", !game.board.includes(null));
@@ -66,7 +66,7 @@ socket.on("make_move", async ({ roomId, index }) => {
     gameOver = true;
   }
 
-  // ✅ Only switch turn if the game is NOT over
+  //  Only switch turn if the game is NOT over
   if (!gameOver) {
     game.turn =
       game.turn === game.players[0].id
@@ -74,7 +74,7 @@ socket.on("make_move", async ({ roomId, index }) => {
         : game.players[0].id;
   }
 
-  // ✅ Save once at the end
+  //  Save once at the end
   await game.save();
 
   // Send board updates
@@ -85,7 +85,7 @@ socket.on("make_move", async ({ roomId, index }) => {
       : null,
   });
 
-  // ✅ Handle Game Over properly
+  //  Handle Game Over properly
   if (gameOver) {
     // Update leaderboard stats
     const [p1, p2] = game.players;

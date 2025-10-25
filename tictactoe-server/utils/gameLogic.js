@@ -7,10 +7,9 @@ export const checkWinner = (board) => {
 
   for (const [a, b, c] of combos) {
     if (board[a] && board[a] === board[b] && board[a] === board[c]) {
-      return board[a]; // "X" or "O"
+      return board[a]; 
     }
   }
 
-  // No winner → just return null (not "Draw")
   return null;
 };
