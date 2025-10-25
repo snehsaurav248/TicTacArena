@@ -3,10 +3,12 @@ import { checkWinner } from "../utils/gameLogic.js";
 import Game from "../models/Game.js";
 
 const queue = [];
+const playerMap = new Map();
 
 export default (io, socket) => {
   // Player looking for a match
   socket.on("find_match", async (username) => {
+    playerMap.set(username, socket.id); // Save mapping for reconnects
     queue.push({ id: socket.id, username });
 
     if (queue.length >= 2) {
@@ -49,38 +51,59 @@ export default (io, socket) => {
     const mark = game.players[0].id === socket.id ? "X" : "O";
     game.board[index] = mark;
 
-    const winner = checkWinner(game.board);
+    const winnerMark = checkWinner(game.board);
+
+    // If there is a winner, store the username instead of "X" or "O"
+    if (winnerMark) {
+      const winnerPlayer =
+        winnerMark === "X" ? game.players[0].username : game.players[1].username;
+      game.winner = winnerPlayer;
+    }
 
     // Switch turn
     game.turn =
-      game.turn === game.players[0].id ? game.players[1].id : game.players[0].id;
-
-    if (winner) game.winner = winner;
+      game.turn === game.players[0].id
+        ? game.players[1].id
+        : game.players[0].id;
 
     await game.save();
 
+    // Update board for both players
     io.to(roomId).emit("updateBoard", {
       board: game.board,
       nextTurn: game.players.find((p) => p.id === game.turn).username,
     });
 
-    if (winner) {
-      io.to(roomId).emit("gameOver", { winner });
-      // Cleanup the game after over to prevent duplicate roomId issues
-      await Game.deleteOne({ roomId });
+    // Notify game over
+    if (winnerMark) {
+      io.to(roomId).emit("gameOver", { winner: game.winner });
     }
   });
 
   // Player reconnects to an existing game
-  socket.on("reconnect_game", async ({ roomId }) => {
-    const game = await Game.findOne({ roomId });
-    if (game) {
+  socket.on("reconnect_game", async ({ roomId, username }) => {
+    try {
+      const game = await Game.findOne({ roomId });
+      if (!game) return;
+
+      const player = game.players.find((p) => p.username === username);
+      if (player) {
+        player.id = socket.id;
+        await game.save();
+      }
+
       socket.join(roomId);
 
       io.to(socket.id).emit("updateBoard", {
         board: game.board,
         nextTurn: game.players.find((p) => p.id === game.turn).username,
       });
+
+      playerMap.set(username, socket.id);
+
+      console.log(` ${username} reconnected to room ${roomId}`);
+    } catch (err) {
+      console.error("Reconnect failed:", err);
     }
   });
 

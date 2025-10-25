@@ -7,6 +7,9 @@ const gameSchema = new mongoose.Schema({
     {
       id: String,
       username: String,
+      wins: { type: Number, default: 0 },
+      draws: { type: Number, default: 0 },
+      losses: { type: Number, default: 0 },
     },
   ],
   board: { type: [String], default: Array(9).fill(null) },
