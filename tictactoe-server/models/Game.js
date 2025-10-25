@@ -10,7 +10,7 @@ const gameSchema = new mongoose.Schema({
     },
   ],
   board: { type: [String], default: Array(9).fill(null) },
-  turn: { type: String }, // socket.id of current turn
+  turn: { type: String }, 
   winner: { type: String, default: null },
   createdAt: { type: Date, default: Date.now },
 });
