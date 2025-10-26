@@ -1,3 +1,3 @@
 import { io } from "socket.io-client";
 
-export const socket = io("http://192.168.7.80:5000");
+export const socket = io("https://tictactoe-server-1q86.onrender.com");

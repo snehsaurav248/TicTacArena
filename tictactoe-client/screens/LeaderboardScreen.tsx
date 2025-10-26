@@ -14,7 +14,7 @@ const LeaderboardScreen: React.FC = () => {
   const [players, setPlayers] = useState<Player[]>([]);
 
   useEffect(() => {
-    fetch("http://192.168.7.80:5000/leaderboard")
+    fetch("https://tictactoe-server-1q86.onrender.com/leaderboard")
       .then((res) => res.json())
       .then((data) => setPlayers(data))
       .catch((err) => console.error(err));
