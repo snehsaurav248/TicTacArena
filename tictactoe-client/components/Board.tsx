@@ -1,6 +1,7 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, StyleSheet } from "react-native";
 import { socket } from "../services/socket";
+import Cell from "./Cell";
 
 type Props = {
   board: (string | null)[];
@@ -18,14 +19,11 @@ const Board: React.FC<Props> = ({ board, roomId, username }) => {
   return (
     <View style={styles.container}>
       {board.map((cell, index) => (
-        <TouchableOpacity
+        <Cell
           key={index}
-          style={styles.cell}
+          value={cell}
           onPress={() => handlePress(index)}
-          disabled={!!cell}
-        >
-          <Text style={styles.cellText}>{cell}</Text>
-        </TouchableOpacity>
+        />
       ))}
     </View>
   );
@@ -33,23 +31,16 @@ const Board: React.FC<Props> = ({ board, roomId, username }) => {
 
 const styles = StyleSheet.create({
   container: {
-    width: 300,
-    height: 300,
+    width: 320,
+    aspectRatio: 1,
     flexDirection: "row",
     flexWrap: "wrap",
+    justifyContent: "space-between",
+    alignContent: "space-between",
     marginVertical: 20,
-  },
-  cell: {
-    width: "33.33%",
-    height: "33.33%",
-    borderWidth: 1,
-    borderColor: "#000",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  cellText: {
-    fontSize: 32,
-    fontWeight: "bold",
+    backgroundColor: "transparent",
+    padding: 10,
+    gap: 8,
   },
 });
 

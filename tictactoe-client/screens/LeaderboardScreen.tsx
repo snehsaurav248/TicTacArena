@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, FlatList, StyleSheet, TouchableOpacity } from "react-native";
-import { useNavigation } from "@react-navigation/native"; // Import hook
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import Animated, { FadeInUp } from 'react-native-reanimated';
 
 type Player = {
   username: string;
@@ -10,72 +11,146 @@ type Player = {
 };
 
 const LeaderboardScreen: React.FC = () => {
-  const navigation = useNavigation(); // Get navigation
+  const navigation = useNavigation();
   const [players, setPlayers] = useState<Player[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch("https://tictactoe-server-1q86.onrender.com/leaderboard")
       .then((res) => res.json())
-      .then((data) => setPlayers(data))
-      .catch((err) => console.error(err));
+      .then((data) => {
+        setPlayers(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error(err);
+        setLoading(false);
+      });
   }, []);
 
+  const getRankColor = (index: number) => {
+    if (index === 0) return '#FFD700'; // Gold
+    if (index === 1) return '#C0C0C0'; // Silver
+    if (index === 2) return '#CD7F32'; // Bronze
+    return '#00E5FF'; // Default neon
+  };
+
   const renderItem = ({ item, index }: { item: Player; index: number }) => (
-    <View style={styles.row}>
-      <Text style={styles.rank}>{index + 1}</Text>
-      <Text style={styles.name}>{item.username}</Text>
-      <Text style={styles.stats}>
-        W:{item.wins} D:{item.draws} L:{item.losses}
-      </Text>
-    </View>
+    <Animated.View entering={FadeInUp.delay(index * 100).duration(400)}>
+      <View style={[styles.row, { borderColor: getRankColor(index) }]}>
+        <View style={styles.rankContainer}>
+          <Text style={[styles.rank, { color: getRankColor(index) }]}>#{index + 1}</Text>
+        </View>
+        <Text style={styles.name}>{item.username}</Text>
+        <View style={styles.statsContainer}>
+          <Text style={styles.statWin}>W:{item.wins}</Text>
+          <Text style={styles.statDraw}>D:{item.draws}</Text>
+          <Text style={styles.statLoss}>L:{item.losses}</Text>
+        </View>
+      </View>
+    </Animated.View>
   );
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>🏆 Leaderboard</Text>
-      <FlatList
-        data={players}
-        keyExtractor={(item) => item.username}
-        renderItem={renderItem}
-      />
-      {/* Back Button */}
+      <Text style={styles.headerTitle}>GLOBAL RANKINGS</Text>
+      
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#00E5FF" />
+        </View>
+      ) : (
+        <FlatList
+          data={players}
+          keyExtractor={(item) => item.username}
+          renderItem={renderItem}
+          contentContainerStyle={styles.listContainer}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
+      
       <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-        <Text style={styles.backButtonText}>⬅ Back</Text>
+        <Text style={styles.backButtonText}>RETURN TO BASE</Text>
       </TouchableOpacity>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: "#F5F5F5" },
-  title: { fontSize: 28, fontWeight: "bold", textAlign: "center", marginBottom: 20 },
+  container: { 
+    flex: 1, 
+    paddingTop: 60,
+    backgroundColor: "#0B0C10" 
+  },
+  headerTitle: { 
+    fontSize: 28, 
+    fontWeight: "900", 
+    textAlign: "center", 
+    marginBottom: 30,
+    color: '#00E5FF',
+    letterSpacing: 4,
+    textShadowColor: 'rgba(0, 229, 255, 0.8)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 15,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  listContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
-    padding: 15,
-    backgroundColor: "#FFFFFF",
-    marginBottom: 10,
-    borderRadius: 10,
+    alignItems: 'center',
+    padding: 18,
+    backgroundColor: "#1E1E2F",
+    marginBottom: 15,
+    borderRadius: 16,
+    borderLeftWidth: 4,
     shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 3,
+    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 5,
+    elevation: 4,
   },
-  rank: { fontWeight: "bold", fontSize: 16 },
-  name: { fontSize: 16 },
-  stats: { fontSize: 16, fontWeight: "500" },
+  rankContainer: {
+    width: 40,
+  },
+  rank: { 
+    fontWeight: "900", 
+    fontSize: 18,
+  },
+  name: { 
+    flex: 1,
+    fontSize: 18,
+    color: '#FFF',
+    fontWeight: 'bold',
+    marginLeft: 10,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  statWin: { fontSize: 14, fontWeight: "800", color: '#4CAF50' },
+  statDraw: { fontSize: 14, fontWeight: "800", color: '#FFC107' },
+  statLoss: { fontSize: 14, fontWeight: "800", color: '#F44336' },
   backButton: {
-    marginTop: 20,
-    alignSelf: "center",
-    backgroundColor: "#6200EE",
-    paddingVertical: 12,
-    paddingHorizontal: 25,
-    borderRadius: 10,
+    margin: 20,
+    backgroundColor: "#1F2833",
+    paddingVertical: 18,
+    borderRadius: 12,
+    alignItems: 'center',
   },
   backButtonText: {
-    color: "#fff",
+    color: "#FFF",
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "900",
+    letterSpacing: 2,
+    opacity: 0.8,
   },
 });
 

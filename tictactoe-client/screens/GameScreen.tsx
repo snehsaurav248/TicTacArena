@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../types/navigation";
 import Board from "../components/Board";
 import { socket } from "../services/socket";
+import Animated, { ZoomIn, ZoomOut } from 'react-native-reanimated';
 
 type Props = NativeStackScreenProps<RootStackParamList, "Game">;
+
+const { width } = Dimensions.get('window');
 
 const GameScreen: React.FC<Props> = ({ route, navigation }) => {
   const { roomId, username } = route.params;
@@ -16,7 +19,6 @@ const GameScreen: React.FC<Props> = ({ route, navigation }) => {
   useEffect(() => {
     if (!roomId) return;
 
-    // ✅ Reconnect player to game with identity
     socket.emit("reconnect_game", { roomId, username });
 
     const handleBoardUpdate = (data: { board: string[]; nextTurn: string }) => {
@@ -31,37 +33,71 @@ const GameScreen: React.FC<Props> = ({ route, navigation }) => {
     socket.on("updateBoard", handleBoardUpdate);
     socket.on("gameOver", handleGameOver);
 
-    // Cleanup listeners on unmount
     return () => {
       socket.off("updateBoard", handleBoardUpdate);
       socket.off("gameOver", handleGameOver);
     };
   }, [roomId, username]);
 
+  const isMyTurn = turn === username;
+
   return (
     <View style={styles.container}>
-      <View style={styles.headerCard}>
-        <Text style={styles.title}>🎮 Tic-Tac-Toe</Text>
-        <Text style={styles.roomText}>Room: {roomId || "Waiting..."}</Text>
-        <Text style={styles.turnText}>Turn: {turn || "Waiting..."}</Text>
+      <View style={styles.headerScoreboard}>
+        <View style={styles.scoreBox}>
+          <Text style={styles.scoreLabel}>ROOM</Text>
+          <Text style={styles.scoreValue}>{roomId || "---"}</Text>
+        </View>
+        <View style={[styles.scoreBox, isMyTurn && styles.activeTurnBox]}>
+          <Text style={styles.scoreLabel}>TURN</Text>
+          <Text style={[styles.scoreValue, isMyTurn && styles.activeTurnText]}>
+            {turn === username ? 'YOURS' : turn}
+          </Text>
+        </View>
       </View>
 
       {roomId ? (
-        <View style={styles.boardContainer}>
+        <View style={styles.boardWrapper}>
           <Board board={board} roomId={roomId} username={username} />
         </View>
       ) : (
-        <Text style={styles.waitText}>Waiting for room...</Text>
+        <Text style={styles.waitText}>LOCATING MATCH...</Text>
       )}
 
-      {winner && <Text style={styles.winnerText}>🏆 Winner: {winner}</Text>}
+      {winner && (
+        <Animated.View 
+          entering={ZoomIn.duration(400)} 
+          exiting={ZoomOut} 
+          style={styles.winnerOverlay}
+        >
+          <View style={styles.winnerCard}>
+            <Text style={styles.winnerText}>
+              {winner === 'Draw' ? 'DRAW!' : `VICTORY`}
+            </Text>
+            {winner !== 'Draw' && (
+              <Text style={styles.winnerName}>{winner} WINS</Text>
+            )}
+            
+            <TouchableOpacity
+              style={styles.homeButton}
+              onPress={() => navigation.navigate("Home")}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.homeButtonText}>RETURN TO BASE</Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      )}
 
-      <TouchableOpacity
-        style={styles.homeButton}
-        onPress={() => navigation.navigate("Home")}
-      >
-        <Text style={styles.homeButtonText}>Back to Home</Text>
-      </TouchableOpacity>
+      {!winner && (
+        <TouchableOpacity
+          style={styles.abortButton}
+          onPress={() => navigation.navigate("Home")}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.abortButtonText}>ABORT MISSION</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 };
@@ -69,68 +105,135 @@ const GameScreen: React.FC<Props> = ({ route, navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F5F5F5",
-    justifyContent: "center",
+    backgroundColor: "#0B0C10",
     alignItems: "center",
-    padding: 20,
+    paddingTop: 60,
+    paddingHorizontal: 20,
   },
-  headerCard: {
-    backgroundColor: "#E8EAF6",
-    padding: 20,
+  headerScoreboard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 40,
+  },
+  scoreBox: {
+    backgroundColor: '#1E1E2F',
+    padding: 15,
     borderRadius: 12,
-    alignItems: "center",
-    marginBottom: 20,
-    shadowColor: "#000",
+    borderWidth: 2,
+    borderColor: '#2A2A40',
+    width: '48%',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+  },
+  activeTurnBox: {
+    borderColor: '#00E5FF',
+    shadowColor: '#00E5FF',
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+  },
+  scoreLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: 'bold',
+    letterSpacing: 2,
+    marginBottom: 5,
+  },
+  scoreValue: {
+    fontSize: 16,
+    color: '#FFF',
+    fontWeight: '900',
+  },
+  activeTurnText: {
+    color: '#00E5FF',
+    textShadowColor: 'rgba(0, 229, 255, 0.8)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
+  },
+  boardWrapper: {
+    padding: 10,
+    backgroundColor: '#111218',
+    borderRadius: 24,
+    borderWidth: 2,
+    borderColor: '#1F2833',
+    shadowColor: '#00E5FF',
     shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#3F51B5",
-    marginBottom: 10,
-  },
-  roomText: {
-    fontSize: 18,
-    color: "#333",
-  },
-  turnText: {
-    fontSize: 18,
-    color: "#555",
-    marginTop: 5,
+    shadowRadius: 20,
   },
   waitText: {
     fontSize: 18,
-    color: "#777",
-    marginTop: 20,
+    color: "#FF007F",
+    marginTop: 50,
+    fontWeight: 'bold',
+    letterSpacing: 3,
   },
-  boardContainer: {
-    backgroundColor: "#FFFFFF",
-    padding: 10,
-    borderRadius: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
+  winnerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(11, 12, 16, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  winnerCard: {
+    width: width * 0.85,
+    backgroundColor: '#1E1E2F',
+    padding: 40,
+    borderRadius: 24,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FFD700',
+    shadowColor: '#FFD700',
+    shadowOpacity: 0.5,
+    shadowOffset: { width: 0, height: 0 },
+    shadowRadius: 20,
   },
   winnerText: {
-    fontSize: 22,
-    marginTop: 25,
-    color: "#4CAF50",
-    fontWeight: "bold",
+    fontSize: 42,
+    color: '#FFD700',
+    fontWeight: '900',
+    letterSpacing: 4,
+    marginBottom: 10,
+    textShadowColor: 'rgba(255, 215, 0, 0.8)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 15,
+  },
+  winnerName: {
+    fontSize: 24,
+    color: '#FFF',
+    marginBottom: 40,
+    fontWeight: 'bold',
+    letterSpacing: 2,
   },
   homeButton: {
-    marginTop: 30,
-    backgroundColor: "#3F51B5",
-    paddingVertical: 12,
+    backgroundColor: "#FFD700",
+    paddingVertical: 15,
     paddingHorizontal: 30,
     borderRadius: 12,
+    shadowColor: "#FFD700",
+    shadowOpacity: 0.5,
+    shadowOffset: { width: 0, height: 0 },
+    shadowRadius: 10,
   },
   homeButtonText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "600",
+    color: "#0B0C10",
+    fontSize: 16,
+    fontWeight: "900",
+    letterSpacing: 2,
+  },
+  abortButton: {
+    marginTop: 'auto',
+    marginBottom: 40,
+    paddingVertical: 15,
+  },
+  abortButtonText: {
+    color: '#F92672',
+    fontSize: 14,
+    fontWeight: 'bold',
+    letterSpacing: 2,
+    opacity: 0.8,
   },
 });
 
